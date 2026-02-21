@@ -35,17 +35,27 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const updated = await prisma.ticket.update({ where: { id }, data: { status: 'ready', readyAt: new Date() } })
 
   // Telegram notify (best-effort)
+  let notified = 0
+  let notifyError: string | null = null
+
   const botToken = process.env.TELEGRAM_BOT_TOKEN
   if (botToken) {
-    const subs = await prisma.subscriber.findMany({ where: { ticketId: id, channel: 'telegram' } })
-    const { telegramSendMessage } = await import('@/lib/telegram')
-    await Promise.allSettled(
-      subs
-        .map((s: { telegramChatId: string | null }) => s.telegramChatId)
-        .filter((x: string | null): x is string => Boolean(x))
-        .map((chatId: string) => telegramSendMessage({ botToken, chatId: String(chatId), text: `✅ Order ${before.orderNumber} is READY for pickup.` }))
-    )
+    try {
+      const subs = await prisma.subscriber.findMany({ where: { ticketId: id, channel: 'telegram' } })
+      const { telegramSendMessage } = await import('@/lib/telegram')
+
+      const results = await Promise.allSettled(
+        subs
+          .map((s: { telegramChatId: string | null }) => s.telegramChatId)
+          .filter((x: string | null): x is string => Boolean(x))
+          .map((chatId: string) => telegramSendMessage({ botToken, chatId: String(chatId), text: `✅ Order ${before.orderNumber} is READY for pickup.` }))
+      )
+
+      notified = results.filter((r) => r.status === 'fulfilled').length
+    } catch (e: any) {
+      notifyError = String(e?.message || e)
+    }
   }
 
-  return NextResponse.json({ ok: true, ticket: updated })
+  return NextResponse.json({ ok: true, ticket: updated, notified, notifyError })
 }
