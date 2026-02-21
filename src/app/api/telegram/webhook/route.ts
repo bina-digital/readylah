@@ -20,13 +20,23 @@ export async function POST(req: Request) {
   const ticket = await prisma.ticket.findUnique({ where: { token } })
   if (!ticket) return NextResponse.json({ ok: true })
 
-  await prisma.subscriber.create({
-    data: {
+  const existing = await prisma.subscriber.findFirst({
+    where: {
       ticketId: ticket.id,
       channel: 'telegram',
       telegramChatId: String(chatId),
     },
   })
+
+  if (!existing) {
+    await prisma.subscriber.create({
+      data: {
+        ticketId: ticket.id,
+        channel: 'telegram',
+        telegramChatId: String(chatId),
+      },
+    })
+  }
 
   // Acknowledge
   const { telegramSendMessage } = await import('@/lib/telegram')

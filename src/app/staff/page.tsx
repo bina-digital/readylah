@@ -70,6 +70,15 @@ export default function StaffPage() {
       alert(j?.error || 'ready_failed')
       return
     }
+
+    if (j?.notified === 0) {
+      alert('Marked READY. No Telegram subscribers yet (customer must click Telegram updates and press Start).')
+    }
+
+    if (j?.notifyError) {
+      alert(`Marked READY, but Telegram send failed: ${String(j.notifyError).slice(0, 160)}`)
+    }
+
     await load()
   }
 

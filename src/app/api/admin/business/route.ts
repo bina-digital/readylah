@@ -11,6 +11,18 @@ export async function POST(req: Request) {
 
   const business = await prisma.business.create({ data: { name }, include: { outlets: true } })
 
+  // Best-effort: set Telegram webhook after first bootstrap
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  if (botToken) {
+    const origin = new URL(req.url).origin
+    const { telegramSetWebhook } = await import('@/lib/telegramWebhook')
+    try {
+      await telegramSetWebhook({ botToken, url: `${origin}/api/telegram/webhook` })
+    } catch {
+      // ignore
+    }
+  }
+
   // Create a default staff PIN (1234) for testing
   const { hashPin } = await import('@/lib/pin')
   await prisma.staffUser.create({
