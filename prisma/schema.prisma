@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum TicketStatus {
+  created
+  ready
+  closed
+  cancelled
+}
+
+enum SubscribeChannel {
+  web
+  telegram
+  whatsapp
+}
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  outlets   Outlet[]
+  staff     StaffUser[]
+}
+
+model Outlet {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+
+  name      String
+  // stable short key used in QR URLs
+  key       String   @unique
+  timezone  String   @default("Asia/Kuala_Lumpur")
+
+  // order number mode (A: customer enters, B: system issues)
+  allowCustomerOrderNumber Boolean @default(true)
+  autoIssueOrderNumber     Boolean @default(true)
+
+  // Telegram config (MVP)
+  telegramEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tickets   Ticket[]
+  counters  OutletDailyCounter[]
+}
+
+model OutletDailyCounter {
+  id        String   @id @default(cuid())
+  outletId  String
+  outlet    Outlet   @relation(fields: [outletId], references: [id])
+
+  // YYYY-MM-DD in outlet timezone
+  dayKey    String
+  seq       Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([outletId, dayKey])
+}
+
+model StaffUser {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+
+  name      String
+  pinHash   String
+  role      String   @default("staff")
+  active    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ticket {
+  id        String       @id @default(cuid())
+  outletId  String
+  outlet    Outlet       @relation(fields: [outletId], references: [id])
+
+  status    TicketStatus @default(created)
+
+  // Customer-visible order number (could be customer-entered or system-issued)
+  orderNumber String
+
+  // token for public status URL + telegram deep link
+  token     String       @unique
+
+  createdAt DateTime @default(now())
+  readyAt   DateTime?
+  closedAt  DateTime?
+
+  subscribers Subscriber[]
+  messages    MessageLog[]
+
+  @@index([outletId, createdAt])
+  @@index([status])
+}
+
+model Subscriber {
+  id        String           @id @default(cuid())
+  ticketId  String
+  ticket    Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  channel   SubscribeChannel
+
+  // Telegram
+  telegramChatId String?
+
+  // WhatsApp (future)
+  whatsappE164   String?
+
+  subscribedAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model MessageLog {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  channel   SubscribeChannel
+  kind      String   // e.g. ready_notification
+  status    String   // success|failed
+  providerMsgId String?
+  error     String?
+
+  createdAt DateTime @default(now())
+}
