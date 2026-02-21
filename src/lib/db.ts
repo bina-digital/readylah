@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { Pool } from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 declare global {
   // eslint-disable-next-line no-var
@@ -7,9 +8,11 @@ declare global {
 }
 
 function makePrisma() {
-  const url = process.env.DATABASE_URL || 'file:./dev.db'
-  const file = url.startsWith('file:') ? url.slice('file:'.length) : url
-  const adapter = new PrismaBetterSqlite3({ url: file })
+  const url = process.env.PRISMA_DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL
+  if (!url) throw new Error('Missing PRISMA_DATABASE_URL / POSTGRES_URL / DATABASE_URL')
+
+  const pool = new Pool({ connectionString: url })
+  const adapter = new PrismaPg(pool)
   return new PrismaClient({ adapter })
 }
 
