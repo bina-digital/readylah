@@ -72,7 +72,7 @@ export default function StaffPage() {
     }
 
     if (j?.notified === 0) {
-      alert('Marked READY. No Telegram subscribers yet (customer must click Telegram updates and press Start).')
+      alert('Marked READY. No Telegram subscribers yet (customer must click Telegram updates and press Start in Telegram).')
     }
 
     if (j?.notifyError) {
