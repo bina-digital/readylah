@@ -13,10 +13,21 @@ export async function POST(req: Request) {
 
   if (!chatId || typeof text !== 'string') return NextResponse.json({ ok: true })
 
-  const m = text.match(/^\/start\s+o_(\w+)/)
+  // If user starts bot without a token, give instructions.
+  const m = text.match(/^\/start(?:\s+o_(\w+))?/) 
   if (!m) return NextResponse.json({ ok: true })
-
   const token = m[1]
+
+  if (!token) {
+    const { telegramSendMessage } = await import('@/lib/telegram')
+    await telegramSendMessage({
+      botToken,
+      chatId: String(chatId),
+      text: 'ReadyLah! here.\n\nTo get updates, scan the outlet QR code, enter your order number, then tap “Telegram updates”.',
+    })
+    return NextResponse.json({ ok: true })
+  }
+
   const ticket = await prisma.ticket.findUnique({ where: { token } })
   if (!ticket) return NextResponse.json({ ok: true })
 

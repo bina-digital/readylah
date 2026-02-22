@@ -29,8 +29,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const { id } = await ctx.params
 
-  const before = await prisma.ticket.findUnique({ where: { id }, include: { subscribers: true } })
+  const before = await prisma.ticket.findUnique({ where: { id } })
   if (!before) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 })
+
+  // Idempotent: if already READY, just return success (don’t require multiple clicks)
+  if (before.status === 'ready') {
+    return NextResponse.json({ ok: true, ticket: before, notified: 0, notifyError: null })
+  }
 
   const updated = await prisma.ticket.update({ where: { id }, data: { status: 'ready', readyAt: new Date() } })
 

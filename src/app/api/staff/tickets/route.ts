@@ -34,6 +34,21 @@ export async function POST(req: Request) {
   if (!outletId) return NextResponse.json({ ok: false, error: 'outlet_required' }, { status: 400 })
   if (!orderNumber) return NextResponse.json({ ok: false, error: 'order_required' }, { status: 400 })
 
+  // De-dupe: if staff double-taps create or network retries, reuse existing active ticket.
+  const existing = await prisma.ticket.findFirst({
+    where: {
+      outletId,
+      orderNumber,
+      status: { in: ['created', 'ready'] },
+      createdAt: { gte: new Date(Date.now() - 1000 * 60 * 60 * 24) },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  if (existing) {
+    return NextResponse.json({ ok: true, ticket: existing, deduped: true })
+  }
+
   const token = crypto.randomBytes(12).toString('hex')
 
   const t = await prisma.ticket.create({
@@ -45,5 +60,5 @@ export async function POST(req: Request) {
     },
   })
 
-  return NextResponse.json({ ok: true, ticket: t })
+  return NextResponse.json({ ok: true, ticket: t, deduped: false })
 }
