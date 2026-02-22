@@ -44,7 +44,7 @@ export default function StatusPage() {
             <div className="mt-3 text-sm text-white/60">Loading…</div>
           ) : (
             <>
-              <div className="mt-2 text-xl font-extrabold">Order {data.orderNumber}</div>
+              <div className="mt-2 text-xl font-extrabold">{data.type === 'seat' ? 'Seating' : 'Order'} {data.orderNumber}</div>
               <div className="mt-1 text-sm text-white/60">Status: {String(data.status).toUpperCase()}</div>
 
               <div className={
@@ -54,7 +54,15 @@ export default function StatusPage() {
                   : 'border-white/10 bg-black/30')
               }>
                 <div className="text-sm font-extrabold">
-                  {data.status === 'ready' ? '✅ Ready for pickup' : '🟢 Preparing'}
+                  {data.type === 'seat'
+                    ? data.status === 'ready'
+                      ? '✅ Your table is ready. Please come to the counter.'
+                      : data.status === 'no_show'
+                        ? '⚪ Marked no-show'
+                        : '🟢 Waiting to be seated'
+                    : data.status === 'ready'
+                      ? '✅ Ready for pickup'
+                      : '🟢 Preparing'}
                 </div>
                 <div className="mt-1 text-xs text-white/50">Auto-refreshes every 3s</div>
               </div>
