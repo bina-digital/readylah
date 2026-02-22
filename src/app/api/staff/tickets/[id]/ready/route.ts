@@ -49,11 +49,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       const subs = await prisma.subscriber.findMany({ where: { ticketId: id, channel: 'telegram' } })
       const { telegramSendMessage } = await import('@/lib/telegram')
 
+      const msg =
+        before.type === 'seat'
+          ? `✅ ${before.orderNumber}: Your table is ready. Please come to the counter.`
+          : `✅ Order ${before.orderNumber} is READY for pickup.`
+
       const results = await Promise.allSettled(
         subs
           .map((s: { telegramChatId: string | null }) => s.telegramChatId)
           .filter((x: string | null): x is string => Boolean(x))
-          .map((chatId: string) => telegramSendMessage({ botToken, chatId: String(chatId), text: `✅ Order ${before.orderNumber} is READY for pickup.` }))
+          .map((chatId: string) => telegramSendMessage({ botToken, chatId: String(chatId), text: msg }))
       )
 
       notified = results.filter((r) => r.status === 'fulfilled').length
