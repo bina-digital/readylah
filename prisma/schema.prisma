@@ -6,11 +6,23 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Plan {
+  starter
+  pro
+  enterprise
+}
+
+enum TicketType {
+  order
+  seat
+}
+
 enum TicketStatus {
   created
   ready
   closed
   cancelled
+  no_show
 }
 
 enum SubscribeChannel {
@@ -19,9 +31,16 @@ enum SubscribeChannel {
   whatsapp
 }
 
+enum CounterType {
+  order
+  seat
+}
+
 model Business {
   id        String   @id @default(cuid())
   name      String
+  plan      Plan     @default(starter)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -54,18 +73,19 @@ model Outlet {
 }
 
 model OutletDailyCounter {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   outletId  String
-  outlet    Outlet   @relation(fields: [outletId], references: [id])
+  outlet    Outlet      @relation(fields: [outletId], references: [id])
 
   // YYYY-MM-DD in outlet timezone
   dayKey    String
-  seq       Int      @default(0)
+  type      CounterType
+  seq       Int         @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([outletId, dayKey])
+  @@unique([outletId, dayKey, type])
 }
 
 model StaffUser {
@@ -87,10 +107,14 @@ model Ticket {
   outletId  String
   outlet    Outlet       @relation(fields: [outletId], references: [id])
 
+  type      TicketType   @default(order)
   status    TicketStatus @default(created)
 
-  // Customer-visible order number (could be customer-entered or system-issued)
+  // For orders: order number; for seating: S001, S002...
   orderNumber String
+
+  // Seating only
+  pax       Int?
 
   // token for public status URL + telegram deep link
   token     String       @unique
@@ -104,6 +128,8 @@ model Ticket {
 
   @@index([outletId, createdAt])
   @@index([status])
+  @@index([type])
+  @@index([outletId, type, orderNumber])
 }
 
 model Subscriber {

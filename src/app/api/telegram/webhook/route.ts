@@ -51,7 +51,11 @@ export async function POST(req: Request) {
 
   // Acknowledge
   const { telegramSendMessage } = await import('@/lib/telegram')
-  await telegramSendMessage({ botToken, chatId: String(chatId), text: `✅ Subscribed. We'll notify you when Order ${ticket.orderNumber} is READY.` })
+  await telegramSendMessage({
+    botToken,
+    chatId: String(chatId),
+    text: `✅ Subscribed. We'll notify you when ${ticket.type === 'seat' ? 'Seating' : 'Order'} ${ticket.orderNumber} is READY.`,
+  })
 
   return NextResponse.json({ ok: true })
 }

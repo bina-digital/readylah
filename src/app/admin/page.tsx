@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 type Outlet = { id: string; name: string; key: string }
 
-type Business = { id: string; name: string; outlets: Outlet[] }
+type Business = { id: string; name: string; plan?: string; outlets: Outlet[] }
 
 export default function AdminPage() {
   const [name, setName] = useState('')
@@ -85,6 +85,32 @@ export default function AdminPage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
               <div className="text-sm font-extrabold text-emerald-300">Business</div>
               <div className="mt-1 text-lg font-extrabold">{biz.name}</div>
+              <div className="mt-3 grid gap-2">
+                <div className="text-xs font-bold text-white/60">Plan</div>
+                <select
+                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-sm font-semibold text-white"
+                  value={biz.plan || 'starter'}
+                  onChange={async (e) => {
+                    const plan = e.target.value
+                    const res = await fetch('/api/admin/plan', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ businessId: biz.id, plan }),
+                    })
+                    const j = await res.json().catch(() => ({}))
+                    if (!res.ok) {
+                      alert(j?.error || 'update_failed')
+                      return
+                    }
+                    setBiz(j.business)
+                  }}
+                >
+                  <option value="starter">Starter</option>
+                  <option value="pro">Pro</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+                <div className="text-[11px] text-white/40">Pro enables Seating and future WhatsApp.</div>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -109,9 +135,14 @@ export default function AdminPage() {
                         Open QR page
                       </a>
                     </div>
-                    <div className="mt-2 text-xs text-white/60">QR URL:</div>
+                    <div className="mt-2 text-xs text-white/60">Order QR URL:</div>
                     <div className="mt-1 break-all rounded-lg bg-black/50 p-2 text-xs font-mono text-white/80">
                       {baseUrl}/q/{o.key}
+                    </div>
+
+                    <div className="mt-2 text-xs text-white/60">Seating QR URL (PRO):</div>
+                    <div className="mt-1 break-all rounded-lg bg-black/50 p-2 text-xs font-mono text-white/80">
+                      {baseUrl}/q/{o.key}/seat
                     </div>
                   </div>
                 ))}
